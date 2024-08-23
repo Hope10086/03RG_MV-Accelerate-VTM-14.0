@@ -129,8 +129,7 @@ void example()
     {
       std::array<float, 2> RGMV             = get_piexl_RGMV(RGMVBuffer, col, row, width, height);
       uint8_t              RGMV_Pixel_Error = get_pixel_Y(RGMVConfidenceBuffer, col, row, width, height);
-      float                RGMVConfidence =
-        RGMV_Pixel_Error > 39 ? PixelRGMVPossConfidence[39] : PixelRGMVPossConfidence[int(RGMV_Pixel_Error)];
+      float RGMVConfidence = RGMV_Pixel_Error > 39 ? 0.0f : PixelRGMVPossConfidence[int(RGMV_Pixel_Error)];
     }
   }
 }
