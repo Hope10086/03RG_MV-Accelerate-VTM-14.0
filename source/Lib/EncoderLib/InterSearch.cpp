@@ -52,7 +52,10 @@
 
 #include <math.h>
 #include <limits>
-
+#include "RGMVTools.h"
+#include <iostream>
+#include <fstream>
+#include <sstream>
 
  //! \ingroup EncoderLib
  //! \{
@@ -444,6 +447,10 @@ inline void InterSearch::xTZSearchHelp( IntTZSearchStruct& rcStruct, const int i
       }
     }
   }
+#if RGMV_Mean
+  if ((iSearchX == rcStruct.start_mv.hor) && (iSearchY == rcStruct.start_mv.ver))
+    rcStruct.start_cost = uiSad;
+#endif
 }
 
 
@@ -800,7 +807,18 @@ Distortion InterSearch::xPatternRefinement( const CPelBuf* pcPatternKey,
     m_cDistParam.cur.buf   = piRefPos;
     uiDist = m_cDistParam.distFunc( m_cDistParam );
     uiDist += m_pcRdCost->getCostOfVectorWithPredictor( cMvTest.getHor(), cMvTest.getVer(), 0 );
-
+//#if RGMV_Mean
+//    if ((pu.start_mv.hor == (rcMvFrac.hor >> 1)) && (pu.start_mv.ver == (rcMvFrac.ver >> 1)) && (iFrac == 2)&&(i==0))
+//    {
+//      std::string filename = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\"
+//                             + std::to_string(pu.cs->picture->poc) + "_start_cost.txt";
+//
+//      // 打开输出文件
+//      std::ofstream outFile(filename, std::ios::app);
+//      outFile << pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " " << pu.lheight() << " " << uiDist << " "
+//              << rcMvFrac.hor  << " " << rcMvFrac.ver << std::endl;
+//    }
+//#endif
 #if GDR_ENABLED
     allOk = (uiDist < uiDistBest);
 
@@ -4706,7 +4724,7 @@ void InterSearch::xCheckBestMVP ( RefPicList eRefPicList, Mv cMv, Mv& rcMvPred, 
 
   AMVPInfo* pcAMVPInfo = &amvpInfo;
 
-  CHECK(pcAMVPInfo->mvCand[riMVPIdx] != rcMvPred, "Invalid MV prediction candidate");
+  //CHECK(pcAMVPInfo->mvCand[riMVPIdx] != rcMvPred, "Invalid MV prediction candidate");
 
   if (pcAMVPInfo->numCand < 2)
   {
@@ -4875,7 +4893,12 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
   }
 
   Mv cMvHalf, cMvQter;
-
+#if RGMV_Mean
+  pu.best_mv.hor=0;
+  pu.best_mv.ver = 0;
+  pu.start_mv.hor = 0;
+  pu.start_mv.ver = 0;
+#endif
   CHECK(eRefPicList >= MAX_NUM_REF_LIST_ADAPT_SR || iRefIdxPred>=int(MAX_IDX_ADAPT_SR), "Invalid reference picture list");
   m_iSearchRange = m_aaiAdaptSR[eRefPicList][iRefIdxPred];
 
@@ -4951,14 +4974,17 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
   m_currRefPicIndex = iRefIdxPred;
   m_skipFracME = false;
   //  Do integer search
-  if( ( m_motionEstimationSearchMethod == MESEARCH_FULL ) || bBi || bQTBTMV )
+  if ((m_motionEstimationSearchMethod == MESEARCH_FULL) || bBi || bQTBTMV)
   {
-    cStruct.subShiftMode = m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE1 || m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE3 ? 2 : 0;
-    m_pcRdCost->setDistParam(m_cDistParam, *cStruct.pcPatternKey, cStruct.piRefY, cStruct.iRefStride, m_lumaClpRng.bd, COMPONENT_Y, cStruct.subShiftMode);
-
+    cStruct.subShiftMode = m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE1
+                               || m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE3
+                             ? 2
+                             : 0;
+    m_pcRdCost->setDistParam(m_cDistParam, *cStruct.pcPatternKey, cStruct.piRefY, cStruct.iRefStride, m_lumaClpRng.bd,
+                             COMPONENT_Y, cStruct.subShiftMode);
     Mv bestInitMv = (bBi ? rcMv : rcMvPred);
     Mv cTmpMv = bestInitMv;
-
+    
     clipMv( cTmpMv, pu.cu->lumaPos(), pu.cu->lumaSize(), *pu.cs->sps, *pu.cs->pps );
     cTmpMv.changePrecision(MV_PRECISION_INTERNAL, MV_PRECISION_INT);
     m_cDistParam.cur.buf = cStruct.piRefY + (cTmpMv.ver * cStruct.iRefStride) + cTmpMv.hor;
@@ -5011,6 +5037,7 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
   else if( bQTBTMV2 )
   {
     rcMv = cIntMv;
+    
 
     cStruct.subShiftMode = ( !m_pcEncCfg->getRestrictMESampling() && m_pcEncCfg->getMotionEstimationSearchMethod() == MESEARCH_SELECTIVE ) ? 1 :
                             ( m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE1 || m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE3 ) ? 2 : 0;
@@ -5021,8 +5048,111 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
     cStruct.subShiftMode = ( !m_pcEncCfg->getRestrictMESampling() && m_pcEncCfg->getMotionEstimationSearchMethod() == MESEARCH_SELECTIVE ) ? 1 :
                             ( m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE1 || m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE3 ) ? 2 : 0;
     rcMv = rcMvPred;
+
+#if RGMV_Mean
+    m_pcRdCost->setDistParam(m_cDistParam, *cStruct.pcPatternKey, cStruct.piRefY, cStruct.iRefStride, m_lumaClpRng.bd,
+                             COMPONENT_Y, cStruct.subShiftMode);
+    int                  width  = 1024;   // 图像宽度
+    int                  height = 1024;   // 图像高度
+    std::vector<int16_t> RGMV_hor;
+    std::vector<int16_t> RGMV_ver;
+    int                  cnt_correct = 0;
+    for (int y = pu.ly(); y < pu.ly() + pu.lheight(); y++)
+    {
+      for (int x = pu.lx(); x < pu.lx() + pu.lwidth(); x++)
+      {
+        uint8_t RGMV_Pixel_Error = get_pixel_Y(pu.cs->picture->RGMVConfidenceBuffer, x, y, width, height);
+        float   RGMVConfidence   = RGMV_Pixel_Error > 39 ? 0.0f : PixelRGMVPossConfidence[int(RGMV_Pixel_Error)];
+        if (RGMVConfidence >= 0.8)
+          cnt_correct++;
+        std::array<float, 2> RGMV = get_piexl_RGMV(pu.cs->picture->MVbuffer, x, y, width, height);
+        RGMV[0]       = RGMV[0] * 16;
+        RGMV[1]       = RGMV[1] * 16;
+
+        int32_t RGMV0 = static_cast<int32_t>(std::round(RGMV[0]));
+        int32_t RGMV1 = static_cast<int32_t>(std::round(RGMV[1]));
+
+        RGMV_hor.push_back(RGMV0);
+        RGMV_ver.push_back(RGMV1);
+      }
+    }
+    int hor_mean   = 0;
+    int ver_mean   = 0;
+    int hor_var    = 0;
+    int ver_var    = 0;
+    int hor_mode    =0;
+    int ver_mode   = 0;
+    int MV_squ_sum = 0;
+    int RGMV_var   = 0;
+    if (static_cast<float>(cnt_correct) / (pu.lwidth() * pu.lheight()) >= 0.9)
+    {
+      pu.replace = 1;
+      hor_mean   = calculate_mean(RGMV_hor);
+      ver_mean   = calculate_mean(RGMV_ver);
+      hor_var    = calculate_variance(RGMV_hor);
+      ver_var   = calculate_variance(RGMV_ver);
+      /*hor_mode    = calculate_mode(RGMV_hor);
+      ver_mode     = calculate_mode(RGMV_ver);*/
+     /* if ((hor_var < 100) && (ver_var < 100))
+      {
+        rcMv.hor = -hor_mean;
+        rcMv.ver = -ver_mean;
+      }
+      else
+      {*/
+        rcMv.hor = -hor_mean;
+        rcMv.ver = -ver_mean;
+      //}
+      
+      m_pcRdCost->setPredictor(predQuarter);
+      m_pcRdCost->setCostScale(2);
+      rcMv.changePrecision(MV_PRECISION_INTERNAL, MV_PRECISION_INT);
+      m_cDistParam.cur.buf = cStruct.piRefY + (rcMv.ver * cStruct.iRefStride) + rcMv.hor;
+      Distortion start_cost = 0;
+       start_cost = m_cDistParam.distFunc(m_cDistParam);
+      std::cout << rcMv.hor << " " << rcMv.ver << " " << start_cost << std::endl;
+      start_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
+     
+      pu.start_cost = start_cost;
+      pu.start_mv   = rcMv;
+      rcMv.changePrecision(MV_PRECISION_INT, MV_PRECISION_INTERNAL);
+    }
+     
+      
+    
+
+#endif
     const Mv *pIntegerMv2Nx2NPred = 0;
     xPatternSearchFast(pu, eRefPicList, iRefIdxPred, cStruct, rcMv, ruiCost, pIntegerMv2Nx2NPred);
+#if RGMV_Mean
+    if (static_cast<float>(cnt_correct) / (pu.lwidth() * pu.lheight()) >= 0.9)
+    {
+      m_pcRdCost->setPredictor(predQuarter);
+      m_pcRdCost->setCostScale(2);
+      m_cDistParam.cur.buf = cStruct.piRefY + (rcMv.ver * cStruct.iRefStride) + rcMv.hor;
+
+      Distortion best_cost = 0;
+      best_cost            = m_cDistParam.distFunc(m_cDistParam);
+      best_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
+      
+      pu.best_cost = best_cost;
+      pu.best_mv   = rcMv;
+     
+      std::string filename = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\"
+                             + std::to_string(pu.cs->picture->poc) + "test222.txt";
+
+      // 打开输出文件
+      std::ofstream outFile(filename, std::ios::app);
+      if (!outFile)
+      {
+        std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
+      }
+      outFile << pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " " << pu.lheight() << " " << pu.start_mv.hor << " "
+              << pu.start_mv.ver << " " << pu.start_cost << " " << pu.best_mv.hor << " " << pu.best_mv.ver << " "
+              << pu.best_cost << "  Aaaa" << std::endl;
+      
+    }
+#endif
     if( blkCache )
     {
       blkCache->setMv( pu.cs->area, eRefPicList, iRefIdxPred, rcMv );
@@ -5073,6 +5203,10 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
     xPatternSearchIntRefine( pu, cStruct, rcMv, rcMvPred, riMVPIdx, ruiBits, ruiCost, amvpInfo, fWeight);
 #endif
   }
+ 
+ /* if ((pu.lx() == 568) && (pu.ly() == 360) && (pu.lwidth() == 8) && (pu.lheight() == 4) && (pu.cs->picture->poc == 1))
+    std::cout << rcMv.hor << " " << rcMv.ver << std::endl;*/
+
   DTRACE(g_trace_ctx, D_ME, "   MECost<L%d,%d>: %6d (%d)  MV:%d,%d\n", (int)eRefPicList, (int)bBi, ruiCost, ruiBits, rcMv.getHor() << 2, rcMv.getVer() << 2);
 }
 
@@ -5330,7 +5464,6 @@ void InterSearch::xTZSearch( const PredictionUnit& pu,
 
   // set rcMv (Median predictor) as start point and as best point
   xTZSearchHelp( cStruct, rcMv.getHor(), rcMv.getVer(), 0, 0 );
-
   // test whether zero Mv is better start point than Median predictor
   if ( bTestZeroVector )
   {
@@ -6050,12 +6183,18 @@ void InterSearch::xPatternSearchFracDIF(
   xExtDIFUpSamplingH(&cPatternRoi, cStruct.useAltHpelIf);
 
   rcMvHalf = rcMvInt;   rcMvHalf <<= 1;    // for mv-cost
+//#if RGMV_Mean
+//  Mv rcMvstart;
+//  rcMvstart = pu.start_mv;
+//  rcMvstart <<= 1;
+//#endif
   Mv baseRefMv(0, 0);
 #if GDR_ENABLED
   ruiCost = xPatternRefinement(pu, eRefPicList, iRefIdx, cStruct.pcPatternKey, baseRefMv, 2, rcMvHalf, (!pu.cs->slice->getDisableSATDForRD()), rbCleanCandExist);
 #else
   ruiCost = xPatternRefinement(cStruct.pcPatternKey, baseRefMv, 2, rcMvHalf, (!pu.cs->slice->getDisableSATDForRD()));
 #endif
+
 
   //  quarter-pel refinement
   if (cStruct.imvShift == IMV_OFF)
@@ -10475,6 +10614,9 @@ void InterSearch::encodeResAndCalcRdInterCU(CodingStructure &cs, Partitioner &pa
     cs.dist     = distortion;
     cs.fracBits = m_CABACEstimator->getEstFracBits();
     cs.cost     = m_pcRdCost->calcRdCost(cs.fracBits, cs.dist);
+#if RGMV_Mean 
+    cs.cost = MAX_DOUBLE;
+#endif
 
     return;
   }

@@ -377,6 +377,13 @@ struct IntraPredictionData
 
 struct InterPredictionData
 {
+  #if RGMV_Mean
+  bool replace = 0;
+  Distortion start_cost = 0;
+  Distortion best_cost  = 0;
+  Mv         start_mv;
+  Mv   best_mv;
+  #endif
   bool      mergeFlag;
   bool      regularMergeFlag;
   uint8_t     mergeIdx;

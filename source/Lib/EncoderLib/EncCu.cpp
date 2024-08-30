@@ -303,6 +303,7 @@ void EncCu::compressCtu( CodingStructure& cs, const UnitArea& area, const unsign
   tempCS->prevQP[CH_L] = bestCS->prevQP[CH_L] = prevQP[CH_L];
 
   xCompressCU(tempCS, bestCS, partitioner);
+  
   cs.slice->m_mapPltCost[0].clear();
   cs.slice->m_mapPltCost[1].clear();
   // all signals were already copied during compression if the CTU was split - at this point only the structures are copied to the top level CS
@@ -338,6 +339,32 @@ void EncCu::compressCtu( CodingStructure& cs, const UnitArea& area, const unsign
   m_CurrCtx                  = 0;
 
 
+  //if (bestCS->picture->poc > 0)
+  //{
+  //  std::string filename =
+  //    "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "test.txt";
+
+  //  // 打开输出文件
+  //  std::ofstream outFile(filename, std::ios::app);
+  //  if (!outFile)
+  //  {
+  //    std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
+  //  }
+  //  for (int i = 0; i < bestCS->cus.size(); i++)
+  //  {
+  //    if (bestCS->cus[i]->predMode == 0)
+  //    {
+  //      if ((bestCS->pus[i]->mergeFlag == 0) && (bestCS->pus[i]->cu->affine == 0))
+  //      {
+  //        if (bestCS->pus[i] ->replace==1)
+  //        outFile << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
+  //                  << bestCS->pus[i]->lheight() << " " << bestCS->pus[i]->best_mv.hor << " " << bestCS->pus[i]->best_mv.ver
+  //                  << " " << bestCS->pus[i]->start_cost << " " << bestCS->pus[i]->best_cost
+  //                << std::endl;
+  //      }
+  //    }
+  //  }
+  //}
   // Ensure that a coding was found
   // Selected mode's RD-cost must be not MAX_DOUBLE.
   CHECK( bestCS->cus.empty()                                   , "No possible encoding found" );

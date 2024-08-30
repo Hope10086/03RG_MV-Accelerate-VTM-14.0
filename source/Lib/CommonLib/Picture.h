@@ -50,6 +50,7 @@
 #include "MCTS.h"
 #include "SEIColourTransform.h"
 #include <deque>
+#include "RGMVTools.h"
 
 
 class SEI;
@@ -192,7 +193,10 @@ public:
   bool precedingDRAP; // preceding a DRAP picture in decoding order
   int  edrapRapId;
   bool nonReferencePictureFlag;
-
+  #if RGMV_Mean
+  YBuffer_8bit RGMVConfidenceBuffer;
+  YUVBuffer_16bit MVbuffer;
+  #endif
   int  poc;
   uint32_t temporalId;
   int      layerId;

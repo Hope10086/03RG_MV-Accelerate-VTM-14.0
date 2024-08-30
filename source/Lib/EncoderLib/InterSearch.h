@@ -400,6 +400,10 @@ protected:
     bool        useAltHpelIf;
     bool        inCtuSearch;
     bool        zeroMV;
+#if RGMV_Mean
+    Mv start_mv;
+    Distortion start_cost;
+#endif
   } IntTZSearchStruct;
 
   // sub-functions for ME

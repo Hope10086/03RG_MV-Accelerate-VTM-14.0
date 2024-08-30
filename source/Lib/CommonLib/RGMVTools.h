@@ -1,12 +1,16 @@
 ﻿#pragma once
 
-#include "CommonDef.h"
 #include <stdio.h>
+#include <vector>
 #include <cstdint>
 #include <cstdlib>
 #include <array>
 #include <fstream>
-
+#include <vector>
+#include <algorithm>
+#include <unordered_map>
+#include <numeric>
+#include <cmath>
 #define Accuracy_corr 16.0 / 15.9687500
 
 const float PixelRGMVPossConfidence[40] = { 1.0,
@@ -60,7 +64,15 @@ struct YBuffer_8bit
 {
   std::unique_ptr<uint8_t[]> yBuffer;
 };
-
+struct Block
+{
+  int x;        // 横坐标
+  int y;        // 纵坐标
+  int width;    // 宽度
+  int height;   // 高度
+  int mv_x;     // 水平运动矢量
+  int mv_y;     // 垂直运动矢量
+};
 //分配内存
 void allocate_YUV444_buffers(YUVBuffer_16bit &buffer, int width, int height);
 void allocate_Y_buffers(YBuffer_8bit &buffer, int width, int height);
@@ -77,3 +89,65 @@ std::array<float, 2> get_piexl_RGMV(YUVBuffer_16bit &buffer, int PosX, int PosY,
 
 //访问RGMV 帧间预测置信度
 uint8_t get_pixel_Y(YBuffer_8bit &buffer, int PosX, int PosY, int width, int height);
+//读取实际编码数据
+std::vector<Block> readBlocksFromFile(const std::string &filename);
+// 计算平均值
+template<typename T> T calculate_mean(const std::vector<T> &values)
+{
+  // 使用 double 类型计算均值以提高精度
+  double sum  = std::accumulate(values.begin(), values.end(), 0.0);
+  double mean = sum / values.size();
+
+  // 返回原始数据类型的均值
+  return static_cast<T>(mean);
+}
+
+// 计算中值
+template<typename T> T calculate_median(std::vector<T> values)
+{
+  size_t size = values.size();
+  if (size == 0)
+    return T(0);
+  std::sort(values.begin(), values.end());
+  if (size % 2 == 0)
+    return (values[size / 2 - 1] + values[size / 2]) / 2;
+  else
+    return values[size / 2];
+}
+
+// 计算众数
+template<typename T> T calculate_mode(const std::vector<T> &values)
+{
+  std::unordered_map<T, int> frequency;
+  for (const T &value: values)
+  {
+    frequency[value]++;
+  }
+  T   mode      = values[0];
+  int max_count = 0;
+  for (const auto &[key, count]: frequency)
+  {
+    if (count > max_count)
+    {
+      max_count = count;
+      mode      = key;
+    }
+  }
+  return mode;
+}
+//计算方差
+template<typename T> double calculate_variance(const std::vector<T> &values)
+{
+  size_t size = values.size();
+  if (size == 0)
+    return 0.0;   // 处理空向量的情况
+
+  double mean             = static_cast<double>(calculate_mean(values));   // 使用 double 计算均值
+  double sum_squared_diff = std::accumulate(values.begin(), values.end(), 0.0,
+                                            [mean](double acc, T value)
+                                            {
+                                              double diff = static_cast<double>(value) - mean;
+                                              return acc + diff * diff;
+                                            });
+  return sum_squared_diff / size;
+}

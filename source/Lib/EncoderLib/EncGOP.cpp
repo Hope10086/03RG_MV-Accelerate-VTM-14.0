@@ -58,6 +58,7 @@
 #include "CommonLib/ProfileLevelTier.h"
 
 #include "DecoderLib/DecLib.h"
+#include "RGMVTools.h"
 
 using namespace std;
 
@@ -2187,6 +2188,21 @@ void EncGOP::compressGOP( int iPOCLast, int iNumPicRcvd, PicList& rcListPic,
     accessUnit.temporalId = m_pcCfg->getGOPEntry( iGOPid ).m_temporalId;
     xGetBuffer( rcListPic, rcListPicYuvRecOut,
                 iNumPicRcvd, iTimeOffset, pcPic, pocCurr, isField );
+
+
+#if RGMV_Mean
+    if (pcPic->poc > 0)
+    {
+      int         frameCount = 30;
+      int         width      = 1024;   // Í¼Ïñ¿í¶È
+      int         height     = 1024;   // Í¼Ïñ¸ß¶È
+      std::string RGMVConfidenceFile =
+        "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\pic\\possibility\\fast\\RGMVConfidence.yuv";
+      read_Y_8bit_frame(RGMVConfidenceFile, pcPic->poc - 1, width, height, pcPic->RGMVConfidenceBuffer);
+      std::string yuvFilePath = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\pic\\fast\\depthmv444_3.yuv";
+      read_YUV444_frame(yuvFilePath, pcPic->poc, width, height, pcPic->MVbuffer);
+    }
+#endif
     picHeader = pcPic->cs->picHeader;
     picHeader->setSPSId( pcPic->cs->pps->getSPSId() );
     picHeader->setPPSId( pcPic->cs->pps->getPPSId() );

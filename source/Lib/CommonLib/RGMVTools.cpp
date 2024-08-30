@@ -1,5 +1,8 @@
 ﻿#include "RGMVTools.h"
-
+#include <vector>
+#include <iostream>
+#include <fstream>
+#include <sstream>
 void allocate_YUV444_buffers(YUVBuffer_16bit &buffer, int width, int height)
 {
   // size_t yuvTotalSize = width * height * 3 * 2;
@@ -41,13 +44,13 @@ void read_Y_8bit_frame(const std::string &yuvFilePath, int frameIndex, int width
     throw std::runtime_error("无法打开YUV文件");
   }
 
-  file.seekg(frameIndex * width * height * 6, std::ios::beg);
+  file.seekg(frameIndex * width * height, std::ios::beg);
 
   // 分配内存
   allocate_Y_buffers(buffer, width, height);
 
   // 读取帧数据
-  file.read(reinterpret_cast<char *>(buffer.yBuffer.get()), width * height * 2);
+  file.read(reinterpret_cast<char *>(buffer.yBuffer.get()), width * height);
   file.close();
 }
 
@@ -107,29 +110,58 @@ uint8_t get_pixel_Y(YBuffer_8bit &buffer, int PosX, int PosY, int width, int hei
   return Y;
 }
 
-void example()
+//void example()
+//{
+//  int frameindex = 1;
+//  int width      = 1024;
+//  int height     = 1024;
+//  // RGMV yuv file path
+//  std::string     RGMVFile = "depthmv444_3.yuv";
+//  YUVBuffer_16bit RGMVBuffer;
+//  read_YUV444_frame(RGMVFile, frameindex, width, height, RGMVBuffer);
+//
+//  std::string  RGMVConfidenceFile = "RGMVConfidence.yuv";
+//  YBuffer_8bit RGMVConfidenceBuffer;
+//  read_Y_8bit_frame(RGMVConfidenceFile, frameindex, width, height, RGMVConfidenceBuffer);
+//
+//  //
+//
+//  for (int row = 0; row < height; row++)
+//  {
+//    for (int col = 0; col < width; col++)
+//    {
+//      std::array<float, 2> RGMV             = get_piexl_RGMV(RGMVBuffer, col, row, width, height);
+//      uint8_t              RGMV_Pixel_Error = get_pixel_Y(RGMVConfidenceBuffer, col, row, width, height);
+//      float RGMVConfidence = RGMV_Pixel_Error > 39 ? 0.0f : PixelRGMVPossConfidence[int(RGMV_Pixel_Error)];
+//    }
+//  }
+//}
+std::vector<Block> readBlocksFromFile(const std::string &filename)
 {
-  int frameindex = 1;
-  int width      = 1024;
-  int height     = 1024;
-  // RGMV yuv file path
-  std::string     RGMVFile = "depthmv444_3.yuv";
-  YUVBuffer_16bit RGMVBuffer;
-  read_YUV444_frame(RGMVFile, frameindex, width, height, RGMVBuffer);
+  std::vector<Block> blocks;
+  std::ifstream      file(filename);
 
-  std::string  RGMVConfidenceFile = "RGMVConfidence.yuv";
-  YBuffer_8bit RGMVConfidenceBuffer;
-  read_Y_8bit_frame(RGMVConfidenceFile, frameindex, width, height, RGMVConfidenceBuffer);
-
-  //
-
-  for (int row = 0; row < height; row++)
+  if (!file.is_open())
   {
-    for (int col = 0; col < width; col++)
+    std::cerr << "无法打开文件: " << filename << std::endl;
+    return blocks;
+  }
+
+  std::string line;
+  while (std::getline(file, line))
+  {
+    std::istringstream iss(line);
+    Block              block;
+    if (iss >> block.x >> block.y >> block.width >> block.height >> block.mv_x >> block.mv_y)
     {
-      std::array<float, 2> RGMV             = get_piexl_RGMV(RGMVBuffer, col, row, width, height);
-      uint8_t              RGMV_Pixel_Error = get_pixel_Y(RGMVConfidenceBuffer, col, row, width, height);
-      float RGMVConfidence = RGMV_Pixel_Error > 39 ? 0.0f : PixelRGMVPossConfidence[int(RGMV_Pixel_Error)];
+      blocks.push_back(block);
+    }
+    else
+    {
+      std::cerr << "解析错误: " << line << std::endl;
     }
   }
+
+  file.close();
+  return blocks;
 }

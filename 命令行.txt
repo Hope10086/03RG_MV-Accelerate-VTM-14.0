@@ -1,0 +1,6 @@
+-c D:\MV\ljy_pose_git_2\cfg\ldp_lmcs_off.cfg    -c  D:\MV\ljy_pose_git_2\cfg\ColorOri_yuv444.cfg  >>out.txt
+-b str.bin --TraceFile="str_all.vtmbmsstats" --TraceRule="D_BLOCK_STATISTICS_ALL:poc>=0"
+-c D:\MV\ljy_pose_git_2\cfg\ldp_lmcs_off.cfg    -c  D:\MV\ljy_pose_git_2\cfg\game_z1_8p.cfg  >>log.txt
+
+
+-c D:\yyx\RGMV\03RG_MV-Accelerate-VTM-14.0\cfg\encoder_lowdelay_P_vtm.cfg    -c  D:\yyx\RGMV\03RG_MV-Accelerate-VTM-14.0\cfg\fast.cfg  >>log.txt

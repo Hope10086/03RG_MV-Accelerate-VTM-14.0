@@ -51,7 +51,7 @@
 #include <cassert>
 
 // clang-format off
-
+#define RGMV_Mean 1
 //########### place macros to be removed in next cycle below this line ###############
 #define JVET_W0129_ENABLE_ALF_TRUEORG                    1 // Using true original samples for ALF as default setting
 
@@ -120,7 +120,7 @@ typedef std::pair<int, int>  TrCost;
 // ====================================================================================================================
 
 #ifndef ENABLE_TRACING
-#define ENABLE_TRACING                                    0 // DISABLE by default (enable only when debugging, requires 15% run-time in decoding) -- see documentation in 'doc/DTrace for NextSoftware.pdf'
+#define ENABLE_TRACING                                    1 // DISABLE by default (enable only when debugging, requires 15% run-time in decoding) -- see documentation in 'doc/DTrace for NextSoftware.pdf'
 #endif
 
 #if ENABLE_TRACING
