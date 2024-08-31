@@ -381,6 +381,10 @@ struct InterPredictionData
   bool replace = 0;
   Distortion start_cost = 0;
   Distortion best_cost  = 0;
+  int range=0;
+  Mv mean;
+  Mv var;
+  Mv mode;
   Mv         start_mv;
   Mv   best_mv;
   #endif

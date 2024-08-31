@@ -339,32 +339,34 @@ void EncCu::compressCtu( CodingStructure& cs, const UnitArea& area, const unsign
   m_CurrCtx                  = 0;
 
 
-  //if (bestCS->picture->poc > 0)
-  //{
-  //  std::string filename =
-  //    "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "test.txt";
+  if (bestCS->picture->poc > 0)
+  {
+    std::string filename =
+      "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "test_modeAll113.txt";
 
-  //  // 打开输出文件
-  //  std::ofstream outFile(filename, std::ios::app);
-  //  if (!outFile)
-  //  {
-  //    std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
-  //  }
-  //  for (int i = 0; i < bestCS->cus.size(); i++)
-  //  {
-  //    if (bestCS->cus[i]->predMode == 0)
-  //    {
-  //      if ((bestCS->pus[i]->mergeFlag == 0) && (bestCS->pus[i]->cu->affine == 0))
-  //      {
-  //        if (bestCS->pus[i] ->replace==1)
-  //        outFile << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
-  //                  << bestCS->pus[i]->lheight() << " " << bestCS->pus[i]->best_mv.hor << " " << bestCS->pus[i]->best_mv.ver
-  //                  << " " << bestCS->pus[i]->start_cost << " " << bestCS->pus[i]->best_cost
-  //                << std::endl;
-  //      }
-  //    }
-  //  }
-  //}
+    // 打开输出文件
+    std::ofstream outFile(filename, std::ios::app);
+    if (!outFile)
+    {
+      std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
+    }
+    for (int i = 0; i < bestCS->cus.size(); i++)
+    {
+      if (bestCS->cus[i]->predMode == 0)
+      {
+        if ((bestCS->pus[i]->mergeFlag == 0) && (bestCS->pus[i]->cu->affine == 0))
+        {
+          if (bestCS->pus[i]->replace == 1)
+            outFile << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
+            << bestCS->pus[i]->lheight() << " "
+            << bestCS->pus[i]->start_mv.hor << " " << bestCS->pus[i]->start_mv.ver << " " << bestCS->pus[i]->mean.hor << " " << bestCS->pus[i]->mean.ver << " " << bestCS->pus[i]->var.hor << " " << bestCS->pus[i]->var.ver << " " << bestCS->pus[i]->mode.hor << " " << bestCS->pus[i]->mode.ver << " "
+            << bestCS->pus[i]->best_mv.hor << " " << bestCS->pus[i]->best_mv.ver
+            << " " << bestCS->pus[i]->start_cost << " " << bestCS->pus[i]->best_cost << " " << bestCS->pus[i]->range <<" "<< bestCS->pus[i]->mvpPos->x<<" "<< bestCS->pus[i]->mvpPos->y
+                  << std::endl;
+        }
+      }
+    }
+  }
   // Ensure that a coding was found
   // Selected mode's RD-cost must be not MAX_DOUBLE.
   CHECK( bestCS->cus.empty()                                   , "No possible encoding found" );

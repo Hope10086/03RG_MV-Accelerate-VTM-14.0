@@ -369,32 +369,32 @@ inline void InterSearch::xTZSearchHelp( IntTZSearchStruct& rcStruct, const int i
 
   m_cDistParam.cur.buf = piRefSrch;
 
-  if( 1 == rcStruct.subShiftMode )
+  if (1 == rcStruct.subShiftMode)
   {
     // motion cost
-    Distortion uiBitCost = m_pcRdCost->getCostOfVectorWithPredictor( iSearchX, iSearchY, rcStruct.imvShift );
+    Distortion uiBitCost = m_pcRdCost->getCostOfVectorWithPredictor(iSearchX, iSearchY, rcStruct.imvShift);
 
     // Skip search if bit cost is already larger than best SAD
     if (uiBitCost < rcStruct.uiBestSad)
     {
-      Distortion uiTempSad = m_cDistParam.distFunc( m_cDistParam );
+      Distortion uiTempSad = m_cDistParam.distFunc(m_cDistParam);
 
-      if((uiTempSad + uiBitCost) < rcStruct.uiBestSad)
+      if ((uiTempSad + uiBitCost) < rcStruct.uiBestSad)
       {
         // it's not supposed that any member of DistParams is manipulated beside cur.buf
         int subShift = m_cDistParam.subShift;
         const Pel* pOrgCpy = m_cDistParam.org.buf;
         uiSad += uiTempSad >> m_cDistParam.subShift;
 
-        while( m_cDistParam.subShift > 0 )
+        while (m_cDistParam.subShift > 0)
         {
-          int isubShift           = m_cDistParam.subShift -1;
+          int isubShift = m_cDistParam.subShift - 1;
           m_cDistParam.org.buf = rcStruct.pcPatternKey->buf + (rcStruct.pcPatternKey->stride << isubShift);
           m_cDistParam.cur.buf = piRefSrch + (rcStruct.iRefStride << isubShift);
-          uiTempSad            = m_cDistParam.distFunc( m_cDistParam );
-          uiSad               += uiTempSad >> m_cDistParam.subShift;
+          uiTempSad = m_cDistParam.distFunc(m_cDistParam);
+          uiSad += uiTempSad >> m_cDistParam.subShift;
 
-          if(((uiSad << isubShift) + uiBitCost) > rcStruct.uiBestSad)
+          if (((uiSad << isubShift) + uiBitCost) > rcStruct.uiBestSad)
           {
             break;
           }
@@ -402,51 +402,111 @@ inline void InterSearch::xTZSearchHelp( IntTZSearchStruct& rcStruct, const int i
           m_cDistParam.subShift--;
         }
 
-        if(m_cDistParam.subShift == 0)
+        if (m_cDistParam.subShift == 0)
         {
           uiSad += uiBitCost;
-
-          if( uiSad < rcStruct.uiBestSad )
+#if RGMV_Mean
+          if ((rcStruct.iBestX == rcStruct.start_mv.hor) && (rcStruct.iBestY == rcStruct.start_mv.ver))
           {
-            rcStruct.uiBestSad      = uiSad;
-            rcStruct.iBestX         = iSearchX;
-            rcStruct.iBestY         = iSearchY;
+            if (uiSad < 0.9*rcStruct.uiBestSad)
+            {
+              rcStruct.uiBestSad = uiSad;
+              rcStruct.iBestX = iSearchX;
+              rcStruct.iBestY = iSearchY;
+              rcStruct.uiBestDistance = uiDistance;
+              rcStruct.uiBestRound = 0;
+              rcStruct.ucPointNr = ucPointNr;
+              m_cDistParam.maximumDistortionForEarlyExit = uiSad;
+            }
+          }
+          else
+          {
+            if (uiSad < rcStruct.uiBestSad)
+
+            {
+              rcStruct.uiBestSad = uiSad;
+              rcStruct.iBestX = iSearchX;
+              rcStruct.iBestY = iSearchY;
+              rcStruct.uiBestDistance = uiDistance;
+              rcStruct.uiBestRound = 0;
+              rcStruct.ucPointNr = ucPointNr;
+              m_cDistParam.maximumDistortionForEarlyExit = uiSad;
+            }
+          }
+#else
+          if (uiSad < rcStruct.uiBestSad)
+
+          {
+            rcStruct.uiBestSad = uiSad;
+            rcStruct.iBestX = iSearchX;
+            rcStruct.iBestY = iSearchY;
             rcStruct.uiBestDistance = uiDistance;
-            rcStruct.uiBestRound    = 0;
-            rcStruct.ucPointNr      = ucPointNr;
+            rcStruct.uiBestRound = 0;
+            rcStruct.ucPointNr = ucPointNr;
+            m_cDistParam.maximumDistortionForEarlyExit = uiSad;
+          }
+#endif
+          // restore org ptr
+          m_cDistParam.org.buf = pOrgCpy;
+          m_cDistParam.subShift = subShift;
+        }
+      }
+    }
+  }
+    else
+    {
+      uiSad = m_cDistParam.distFunc(m_cDistParam);
+
+      // only add motion cost if uiSad is smaller than best. Otherwise pointless
+      // to add motion cost.
+      if (uiSad < rcStruct.uiBestSad)
+      {
+        // motion cost
+        uiSad += m_pcRdCost->getCostOfVectorWithPredictor(iSearchX, iSearchY, rcStruct.imvShift);
+#if RGMV_Mean
+        if ((rcStruct.iBestX == rcStruct.start_mv.hor) && (rcStruct.iBestY == rcStruct.start_mv.ver))
+        {
+          if (uiSad < 0.9*rcStruct.uiBestSad)
+          {
+            rcStruct.uiBestSad = uiSad;
+            rcStruct.iBestX = iSearchX;
+            rcStruct.iBestY = iSearchY;
+            rcStruct.uiBestDistance = uiDistance;
+            rcStruct.uiBestRound = 0;
+            rcStruct.ucPointNr = ucPointNr;
             m_cDistParam.maximumDistortionForEarlyExit = uiSad;
           }
         }
+        else
+        {
+          if (uiSad < rcStruct.uiBestSad)
 
-        // restore org ptr
-        m_cDistParam.org.buf  = pOrgCpy;
-        m_cDistParam.subShift = subShift;
+          {
+            rcStruct.uiBestSad = uiSad;
+            rcStruct.iBestX = iSearchX;
+            rcStruct.iBestY = iSearchY;
+            rcStruct.uiBestDistance = uiDistance;
+            rcStruct.uiBestRound = 0;
+            rcStruct.ucPointNr = ucPointNr;
+            m_cDistParam.maximumDistortionForEarlyExit = uiSad;
+          }
+        }
+#else
+        if (uiSad < rcStruct.uiBestSad)
+
+        {
+          rcStruct.uiBestSad = uiSad;
+          rcStruct.iBestX = iSearchX;
+          rcStruct.iBestY = iSearchY;
+          rcStruct.uiBestDistance = uiDistance;
+          rcStruct.uiBestRound = 0;
+          rcStruct.ucPointNr = ucPointNr;
+          m_cDistParam.maximumDistortionForEarlyExit = uiSad;
+        }
+#endif
       }
     }
-  }
-  else
-  {
-    uiSad = m_cDistParam.distFunc( m_cDistParam );
-
-    // only add motion cost if uiSad is smaller than best. Otherwise pointless
-    // to add motion cost.
-    if( uiSad < rcStruct.uiBestSad )
-    {
-      // motion cost
-      uiSad += m_pcRdCost->getCostOfVectorWithPredictor( iSearchX, iSearchY, rcStruct.imvShift );
-
-      if( uiSad < rcStruct.uiBestSad )
-      {
-        rcStruct.uiBestSad      = uiSad;
-        rcStruct.iBestX         = iSearchX;
-        rcStruct.iBestY         = iSearchY;
-        rcStruct.uiBestDistance = uiDistance;
-        rcStruct.uiBestRound    = 0;
-        rcStruct.ucPointNr      = ucPointNr;
-        m_cDistParam.maximumDistortionForEarlyExit = uiSad;
-      }
-    }
-  }
+  
 #if RGMV_Mean
   if ((iSearchX == rcStruct.start_mv.hor) && (iSearchY == rcStruct.start_mv.ver))
     rcStruct.start_cost = uiSad;
@@ -4893,12 +4953,7 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
   }
 
   Mv cMvHalf, cMvQter;
-#if RGMV_Mean
-  pu.best_mv.hor=0;
-  pu.best_mv.ver = 0;
-  pu.start_mv.hor = 0;
-  pu.start_mv.ver = 0;
-#endif
+
   CHECK(eRefPicList >= MAX_NUM_REF_LIST_ADAPT_SR || iRefIdxPred>=int(MAX_IDX_ADAPT_SR), "Invalid reference picture list");
   m_iSearchRange = m_aaiAdaptSR[eRefPicList][iRefIdxPred];
 
@@ -5066,12 +5121,12 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
         if (RGMVConfidence >= 0.8)
           cnt_correct++;
         std::array<float, 2> RGMV = get_piexl_RGMV(pu.cs->picture->MVbuffer, x, y, width, height);
-        RGMV[0]       = RGMV[0] * 16;
-        RGMV[1]       = RGMV[1] * 16;
+      
 
         int32_t RGMV0 = static_cast<int32_t>(std::round(RGMV[0]));
         int32_t RGMV1 = static_cast<int32_t>(std::round(RGMV[1]));
-
+       
+        
         RGMV_hor.push_back(RGMV0);
         RGMV_ver.push_back(RGMV1);
       }
@@ -5084,73 +5139,94 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
     int ver_mode   = 0;
     int MV_squ_sum = 0;
     int RGMV_var   = 0;
-    if (static_cast<float>(cnt_correct) / (pu.lwidth() * pu.lheight()) >= 0.9)
+    if ((float)(cnt_correct) / (pu.lwidth() * pu.lheight()) >= 0.9)
     {
+      
+      pu.best_mv.hor=0;
+      pu.best_mv.ver = 0;
+      pu.start_mv.hor = 0;
+      pu.start_mv.ver = 0;
+      pu.mean.hor=0;
+      pu.mean.ver = 0;
+      pu.var.hor = 0;
+      pu.var.ver = 0;
+      pu.mode.hor = 0;
+      pu.mode.ver = 0;
       pu.replace = 1;
       hor_mean   = calculate_mean(RGMV_hor);
       ver_mean   = calculate_mean(RGMV_ver);
       hor_var    = calculate_variance(RGMV_hor);
       ver_var   = calculate_variance(RGMV_ver);
-      /*hor_mode    = calculate_mode(RGMV_hor);
-      ver_mode     = calculate_mode(RGMV_ver);*/
-     /* if ((hor_var < 100) && (ver_var < 100))
+      hor_mode    = calculate_mode(RGMV_hor);
+      ver_mode     = calculate_mode(RGMV_ver);
+      pu.mean.hor = hor_mean;
+      pu.mean.ver = ver_mean;
+      pu.var.hor = hor_var;
+      pu.var.ver = ver_var;
+      pu.mode.hor = hor_mode;
+      pu.mode.ver = ver_mode;
+      if ((hor_var < 100) && (ver_var < 100))
       {
         rcMv.hor = -hor_mean;
         rcMv.ver = -ver_mean;
       }
       else
-      {*/
-        rcMv.hor = -hor_mean;
-        rcMv.ver = -ver_mean;
-      //}
+      {
+        rcMv.hor = -hor_mode;
+        rcMv.ver = -ver_mode;
+      }
       
-      m_pcRdCost->setPredictor(predQuarter);
-      m_pcRdCost->setCostScale(2);
-      rcMv.changePrecision(MV_PRECISION_INTERNAL, MV_PRECISION_INT);
-      m_cDistParam.cur.buf = cStruct.piRefY + (rcMv.ver * cStruct.iRefStride) + rcMv.hor;
-      Distortion start_cost = 0;
-       start_cost = m_cDistParam.distFunc(m_cDistParam);
-      std::cout << rcMv.hor << " " << rcMv.ver << " " << start_cost << std::endl;
-      start_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
-     
-      pu.start_cost = start_cost;
+     // m_pcRdCost->setPredictor(predQuarter);
+     // m_pcRdCost->setCostScale(2);
+     //// rcMv.changePrecision(MV_PRECISION_INTERNAL, MV_PRECISION_INT);
+     // m_cDistParam.cur.buf = cStruct.piRefY + (rcMv.ver * cStruct.iRefStride) + rcMv.hor;
+     // Distortion start_cost = 0;
+     // start_cost = m_cDistParam.distFunc(m_cDistParam);
+     // start_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
+     //
+      //pu.start_cost = start_cost;
       pu.start_mv   = rcMv;
+      cStruct.start_mv = rcMv;
       rcMv.changePrecision(MV_PRECISION_INT, MV_PRECISION_INTERNAL);
+      
     }
      
       
-    
-
+  
 #endif
     const Mv *pIntegerMv2Nx2NPred = 0;
+   
     xPatternSearchFast(pu, eRefPicList, iRefIdxPred, cStruct, rcMv, ruiCost, pIntegerMv2Nx2NPred);
 #if RGMV_Mean
-    if (static_cast<float>(cnt_correct) / (pu.lwidth() * pu.lheight()) >= 0.9)
+    if ((float)(cnt_correct) / (pu.lwidth() * pu.lheight()) >= 0.9)
     {
-      m_pcRdCost->setPredictor(predQuarter);
+      pu.start_cost = cStruct.start_cost;
+      pu.best_cost = cStruct.best_cost;
+      /*m_pcRdCost->setPredictor(predQuarter);
       m_pcRdCost->setCostScale(2);
       m_cDistParam.cur.buf = cStruct.piRefY + (rcMv.ver * cStruct.iRefStride) + rcMv.hor;
 
       Distortion best_cost = 0;
-      best_cost            = m_cDistParam.distFunc(m_cDistParam);
-      best_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
+          best_cost           = m_cDistParam.distFunc(m_cDistParam);
+        best_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
       
-      pu.best_cost = best_cost;
-      pu.best_mv   = rcMv;
-     
-      std::string filename = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\"
-                             + std::to_string(pu.cs->picture->poc) + "test222.txt";
+      pu.best_cost = best_cost;*/
+      pu.best_mv   = rcMv;     
+      pu.range = (pu.best_mv.hor - pu.start_mv.hor)*(pu.best_mv.hor - pu.start_mv.hor) + (pu.best_mv.ver - pu.start_mv.ver)*(pu.best_mv.ver - pu.start_mv.ver);
+      //std::string filename = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\"
+      //                       + std::to_string(pu.cs->picture->poc) + "test.txt";
 
-      // 打开输出文件
-      std::ofstream outFile(filename, std::ios::app);
-      if (!outFile)
-      {
-        std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
-      }
-      outFile << pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " " << pu.lheight() << " " << pu.start_mv.hor << " "
-              << pu.start_mv.ver << " " << pu.start_cost << " " << pu.best_mv.hor << " " << pu.best_mv.ver << " "
-              << pu.best_cost << "  Aaaa" << std::endl;
-      
+      //// 打开输出文件
+      //std::ofstream outFile(filename, std::ios::app);
+      //if (!outFile)
+      //{
+      //  std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
+      //}
+      //outFile << pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " " << pu.lheight() << " " << pu.start_mv.hor << " "
+      //        << pu.start_mv.ver << " " << pu.start_cost << " " << pu.best_mv.hor << " " << pu.best_mv.ver << " "
+      //        << pu.best_cost 
+      //        << std::endl;
+      //
     }
 #endif
     if( blkCache )
@@ -5459,6 +5535,10 @@ void InterSearch::xTZSearch( const PredictionUnit& pu,
   m_cDistParam.maximumDistortionForEarlyExit = cStruct.uiBestSad;
   m_pcRdCost->setDistParam( m_cDistParam, *cStruct.pcPatternKey, cStruct.piRefY, cStruct.iRefStride, m_lumaClpRng.bd, COMPONENT_Y, cStruct.subShiftMode );
 
+#if RGMV_Mean
+  cStruct.iBestX = cStruct.start_mv.hor;
+  cStruct.iBestY = cStruct.start_mv.ver;
+#endif
   // distortion
 
 
@@ -5779,6 +5859,9 @@ void InterSearch::xTZSearch( const PredictionUnit& pu,
 
   // write out best match
   rcMv.set( cStruct.iBestX, cStruct.iBestY );
+#if RGMV_Mean
+  cStruct.best_cost = cStruct.uiBestSad;
+#endif
   ruiSAD = cStruct.uiBestSad - m_pcRdCost->getCostOfVectorWithPredictor( cStruct.iBestX, cStruct.iBestY, cStruct.imvShift );
 }
 

@@ -402,7 +402,9 @@ protected:
     bool        zeroMV;
 #if RGMV_Mean
     Mv start_mv;
-    Distortion start_cost;
+    Distortion start_cost = 0;;
+    Distortion best_cost=0;
+
 #endif
   } IntTZSearchStruct;
 
