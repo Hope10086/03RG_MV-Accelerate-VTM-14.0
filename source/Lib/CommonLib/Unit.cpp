@@ -524,7 +524,17 @@ void PredictionUnit::initData()
   intraDir[1] = PLANAR_IDX;
   mipTransposedFlag = false;
   multiRefIdx = 0;
-
+//#if RGMV_Mean
+//  replace = false;
+//   start_cost = 0;
+//  best_cost = 0;
+//   range = 0;
+//   mean.setZero();
+//  var.setZero();
+//  mode.setZero();
+//  start_mv.setZero();
+//    best_mv.setZero();
+//#endif
   // inter data
   mergeFlag   = false;
   regularMergeFlag = false;

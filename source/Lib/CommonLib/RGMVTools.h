@@ -99,7 +99,7 @@ T calculate_mean(const std::vector<T>& values) {
   double mean = sum / values.size();
 
   // 返回原始数据类型的均值
-  return static_cast<T>(mean);
+  return (int)(mean);
 }
 
 // 计算中值
@@ -161,5 +161,5 @@ int calculate_variance(const std::vector<T>& values) {
   double variance = sum_squared_diff / size;
 
   // 将方差四舍五入为整数
-  return static_cast<int>(std::round(variance));
+  return (int)(std::round(variance));
 }

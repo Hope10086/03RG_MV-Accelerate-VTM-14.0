@@ -4953,7 +4953,9 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
   }
 
   Mv cMvHalf, cMvQter;
-
+#if RGMV_Mean
+  pu.replace = 0;
+#endif
   CHECK(eRefPicList >= MAX_NUM_REF_LIST_ADAPT_SR || iRefIdxPred>=int(MAX_IDX_ADAPT_SR), "Invalid reference picture list");
   m_iSearchRange = m_aaiAdaptSR[eRefPicList][iRefIdxPred];
 
@@ -5092,11 +5094,143 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
   else if( bQTBTMV2 )
   {
     rcMv = cIntMv;
-    
+#if RGMV_Mean
+    m_pcRdCost->setDistParam(m_cDistParam, *cStruct.pcPatternKey, cStruct.piRefY, cStruct.iRefStride, m_lumaClpRng.bd,
+      COMPONENT_Y, cStruct.subShiftMode);
+    int                  width = 1024;   // 图像宽度
+    int                  height = 1024;   // 图像高度
+    std::vector<int16_t> RGMV_hor;
+    std::vector<int16_t> RGMV_ver;
+    int                  cnt_correct = 0;
+    for (int y = pu.ly(); y < pu.ly() + pu.lheight(); y++)
+    {
+      for (int x = pu.lx(); x < pu.lx() + pu.lwidth(); x++)
+      {
+        uint8_t RGMV_Pixel_Error = get_pixel_Y(pu.cs->picture->RGMVConfidenceBuffer, x, y, width, height);
+        float   RGMVConfidence = RGMV_Pixel_Error > 39 ? 0.0f : PixelRGMVPossConfidence[int(RGMV_Pixel_Error)];
+        if (RGMVConfidence >= 0.8)
+          cnt_correct++;
 
+        std::array<float, 2> RGMV = get_piexl_RGMV(pu.cs->picture->MVbuffer, x, y, width, height);
+
+
+        int32_t RGMV0 = static_cast<int32_t>(std::round(RGMV[0]));
+        int32_t RGMV1 = static_cast<int32_t>(std::round(RGMV[1]));
+
+
+        RGMV_hor.push_back(RGMV0);
+        RGMV_ver.push_back(RGMV1);
+      }
+    }
+    int hor_mean = 0;
+    int ver_mean = 0;
+    int hor_var = 0;
+    int ver_var = 0;
+    int hor_mode = 0;
+    int ver_mode = 0;
+    int MV_squ_sum = 0;
+    int RGMV_var = 0;
+    if ((float)(cnt_correct) / (pu.lwidth() * pu.lheight()) >= 0.9)
+    {
+      //pu.correct_cnt = cnt_correct;
+
+      pu.replace = 1;
+      pu.mean.hor = 0;
+      pu.mean.ver = 0;
+      pu.var.hor = 0;
+      pu.var.ver = 0;
+      pu.mode.hor = 0;
+      pu.mode.ver = 0;
+      hor_mean = calculate_mean(RGMV_hor);
+      ver_mean = calculate_mean(RGMV_ver);
+      hor_var = calculate_variance(RGMV_hor);
+      ver_var = calculate_variance(RGMV_ver);
+      hor_mode = calculate_mode(RGMV_hor);
+      ver_mode = calculate_mode(RGMV_ver);
+      pu.mean.hor = hor_mean;
+      pu.mean.ver = ver_mean;
+      pu.var.hor = hor_var;
+      pu.var.ver = ver_var;
+      pu.mode.hor = hor_mode;
+      pu.mode.ver = ver_mode;
+      if ((hor_var < 100) && (ver_var < 100))
+      {
+        rcMv.hor = -hor_mean;
+        rcMv.ver = -ver_mean;
+      }
+      else
+      {
+        rcMv.hor = -hor_mode;
+        rcMv.ver = -ver_mode;
+      }
+
+
+      // m_pcRdCost->setPredictor(predQuarter);
+      // m_pcRdCost->setCostScale(2);
+      //// rcMv.changePrecision(MV_PRECISION_INTERNAL, MV_PRECISION_INT);
+      // m_cDistParam.cur.buf = cStruct.piRefY + (rcMv.ver * cStruct.iRefStride) + rcMv.hor;
+      // Distortion start_cost = 0;
+      // start_cost = m_cDistParam.distFunc(m_cDistParam);
+      // start_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
+      //
+       //pu.start_cost = start_cost;
+      pu.start_mv.hor = 0;
+      pu.start_mv.ver = 0;
+      pu.best_mv.hor = 0;
+      pu.best_mv.ver = 0;
+      pu.start_mv = rcMv;
+      cStruct.start_mv = rcMv;
+      rcMv.changePrecision(MV_PRECISION_INT, MV_PRECISION_INTERNAL);
+
+    }
     cStruct.subShiftMode = ( !m_pcEncCfg->getRestrictMESampling() && m_pcEncCfg->getMotionEstimationSearchMethod() == MESEARCH_SELECTIVE ) ? 1 :
                             ( m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE1 || m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE3 ) ? 2 : 0;
     xTZSearch(pu, eRefPicList, iRefIdxPred, cStruct, rcMv, ruiCost, NULL, false, true);
+    if ((float)(cnt_correct) / (pu.lwidth() * pu.lheight()) >= 0.9)
+    {
+      pu.start_cost = cStruct.start_cost;
+      pu.best_cost = cStruct.best_cost;
+      /*m_pcRdCost->setPredictor(predQuarter);
+      m_pcRdCost->setCostScale(2);
+      m_cDistParam.cur.buf = cStruct.piRefY + (rcMv.ver * cStruct.iRefStride) + rcMv.hor;
+
+      Distortion best_cost = 0;
+          best_cost           = m_cDistParam.distFunc(m_cDistParam);
+        best_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
+
+      pu.best_cost = best_cost;*/
+      pu.best_mv = rcMv;
+      pu.range = (pu.best_mv.hor - pu.start_mv.hor)*(pu.best_mv.hor - pu.start_mv.hor) + (pu.best_mv.ver - pu.start_mv.ver)*(pu.best_mv.ver - pu.start_mv.ver);
+      // std::string filename1 =
+       //  "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(pu.cs->picture->poc) + "AMVP.txt";
+
+       //// 打开输出文件
+       //std::ofstream outFile1(filename1, std::ios::app);
+       //if(((pu.lx()==80)&&(pu.ly()==372)&&(pu.lwidth()==16)&&(pu.lheight()==4))|| ((pu.lx() == 336) && (pu.ly() == 276) && (pu.lwidth() == 16) && (pu.lheight() == 4))|| ((pu.lx() == 512) && (pu.ly() == 588) && (pu.lwidth() == 32) && (pu.lheight() == 4)))
+       //outFile1 << pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " "
+       //  <<pu.lheight() << " "
+       //  << pu.start_mv.hor << " " << pu.start_mv.ver << " " << pu.mean.hor << " " << pu.mean.ver << " " << pu.var.hor << " " << pu.var.ver << " " << pu.mode.hor << " " << pu.mode.ver << " "
+       //  << pu.best_mv.hor << " " <<pu.best_mv.ver
+       //  << " " << pu.start_cost << " " << pu.best_cost << " " << pu.range << " "<<pu.replace
+       //  << std::endl;
+
+      std::string filename = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\"
+        + std::to_string(pu.cs->picture->poc) + "all.txt";
+
+      // 打开输出文件
+      std::ofstream outFile11(filename, std::ios::app);
+      if (!outFile11)
+      {
+        std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
+      }
+      outFile11<< pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " "
+         <<pu.lheight() << " "
+         << pu.start_mv.hor << " " << pu.start_mv.ver << " " << pu.mean.hor << " " << pu.mean.ver << " " << pu.var.hor << " " << pu.var.ver << " " << pu.mode.hor << " " << pu.mode.ver << " "
+         << pu.best_mv.hor << " " <<pu.best_mv.ver
+         << " " << pu.start_cost << " " << pu.best_cost << " " << pu.range << " "<<pu.replace
+         << std::endl;
+#endif
+    }
   }
   else
   {
@@ -5120,6 +5254,7 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
         float   RGMVConfidence   = RGMV_Pixel_Error > 39 ? 0.0f : PixelRGMVPossConfidence[int(RGMV_Pixel_Error)];
         if (RGMVConfidence >= 0.8)
           cnt_correct++;
+          
         std::array<float, 2> RGMV = get_piexl_RGMV(pu.cs->picture->MVbuffer, x, y, width, height);
       
 
@@ -5141,18 +5276,15 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
     int RGMV_var   = 0;
     if ((float)(cnt_correct) / (pu.lwidth() * pu.lheight()) >= 0.9)
     {
+      //pu.correct_cnt = cnt_correct;
       
-      pu.best_mv.hor=0;
-      pu.best_mv.ver = 0;
-      pu.start_mv.hor = 0;
-      pu.start_mv.ver = 0;
-      pu.mean.hor=0;
+      pu.replace = 1;
+      pu.mean.hor = 0;
       pu.mean.ver = 0;
       pu.var.hor = 0;
       pu.var.ver = 0;
       pu.mode.hor = 0;
       pu.mode.ver = 0;
-      pu.replace = 1;
       hor_mean   = calculate_mean(RGMV_hor);
       ver_mean   = calculate_mean(RGMV_ver);
       hor_var    = calculate_variance(RGMV_hor);
@@ -5176,6 +5308,7 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
         rcMv.ver = -ver_mode;
       }
       
+
      // m_pcRdCost->setPredictor(predQuarter);
      // m_pcRdCost->setCostScale(2);
      //// rcMv.changePrecision(MV_PRECISION_INTERNAL, MV_PRECISION_INT);
@@ -5185,6 +5318,10 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
      // start_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
      //
       //pu.start_cost = start_cost;
+      pu.start_mv.hor = 0;
+      pu.start_mv.ver = 0;
+      pu.best_mv.hor = 0;
+      pu.best_mv.ver = 0;
       pu.start_mv   = rcMv;
       cStruct.start_mv = rcMv;
       rcMv.changePrecision(MV_PRECISION_INT, MV_PRECISION_INTERNAL);
@@ -5213,20 +5350,33 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
       pu.best_cost = best_cost;*/
       pu.best_mv   = rcMv;     
       pu.range = (pu.best_mv.hor - pu.start_mv.hor)*(pu.best_mv.hor - pu.start_mv.hor) + (pu.best_mv.ver - pu.start_mv.ver)*(pu.best_mv.ver - pu.start_mv.ver);
-      //std::string filename = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\"
-      //                       + std::to_string(pu.cs->picture->poc) + "test.txt";
+     // std::string filename1 =
+      //  "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(pu.cs->picture->poc) + "AMVP.txt";
 
       //// 打开输出文件
-      //std::ofstream outFile(filename, std::ios::app);
-      //if (!outFile)
-      //{
-      //  std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
-      //}
-      //outFile << pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " " << pu.lheight() << " " << pu.start_mv.hor << " "
-      //        << pu.start_mv.ver << " " << pu.start_cost << " " << pu.best_mv.hor << " " << pu.best_mv.ver << " "
-      //        << pu.best_cost 
-      //        << std::endl;
-      //
+      //std::ofstream outFile1(filename1, std::ios::app);
+      //if(((pu.lx()==80)&&(pu.ly()==372)&&(pu.lwidth()==16)&&(pu.lheight()==4))|| ((pu.lx() == 336) && (pu.ly() == 276) && (pu.lwidth() == 16) && (pu.lheight() == 4))|| ((pu.lx() == 512) && (pu.ly() == 588) && (pu.lwidth() == 32) && (pu.lheight() == 4)))
+      //outFile1 << pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " "
+      //  <<pu.lheight() << " "
+      //  << pu.start_mv.hor << " " << pu.start_mv.ver << " " << pu.mean.hor << " " << pu.mean.ver << " " << pu.var.hor << " " << pu.var.ver << " " << pu.mode.hor << " " << pu.mode.ver << " "
+      //  << pu.best_mv.hor << " " <<pu.best_mv.ver
+      //  << " " << pu.start_cost << " " << pu.best_cost << " " << pu.range << " "<<pu.replace
+      //  << std::endl;
+     
+      std::string filename = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\"
+                             + std::to_string(pu.cs->picture->poc) + "all.txt";
+
+      // 打开输出文件
+      std::ofstream outFile(filename, std::ios::app);
+      if (!outFile)
+      {
+        std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
+      }
+      outFile << pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " " << pu.lheight() << " " << pu.start_mv.hor << " "
+              << pu.start_mv.ver << " " << pu.start_cost << " " << pu.best_mv.hor << " " << pu.best_mv.ver << " "
+              << pu.best_cost 
+              << std::endl;
+      
     }
 #endif
     if( blkCache )
@@ -10696,10 +10846,11 @@ void InterSearch::encodeResAndCalcRdInterCU(CodingStructure &cs, Partitioner &pa
 
     cs.dist     = distortion;
     cs.fracBits = m_CABACEstimator->getEstFracBits();
-    cs.cost     = m_pcRdCost->calcRdCost(cs.fracBits, cs.dist);
-#if RGMV_Mean 
-    cs.cost = MAX_DOUBLE;
+#if RGMV_Mean
+    cs.fracBits = MAX_DOUBLE;
 #endif
+    cs.cost     = m_pcRdCost->calcRdCost(cs.fracBits, cs.dist);
+
 
     return;
   }
