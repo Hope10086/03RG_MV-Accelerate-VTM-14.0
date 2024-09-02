@@ -307,14 +307,14 @@ void EncCu::compressCtu( CodingStructure& cs, const UnitArea& area, const unsign
 
   if (bestCS->picture->poc > 0)
   {
-    std::string filename =
+    std::string filename21 =
       "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "choose.txt";
 
     // 打开输出文件
-    std::ofstream outFile(filename, std::ios::app);
-    if (!outFile)
+    std::ofstream outFile21(filename21, std::ios::app);
+    if (!outFile21)
     {
-      std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
+      std::cerr << "无法打开输出文件: " << filename21 << std::endl;   // 错误代码
     }
     for (int i = 0; i < bestCS->cus.size(); i++)
     {
@@ -322,13 +322,14 @@ void EncCu::compressCtu( CodingStructure& cs, const UnitArea& area, const unsign
       {
         if ((bestCS->pus[i]->mergeFlag == 0) && (bestCS->pus[i]->cu->affine == 0))
         {
-          
-          outFile << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
-            << bestCS->pus[i]->lheight() << " " << std::endl;
-            /*<< bestCS->pus[i]->start_mv.hor << " " << bestCS->pus[i]->start_mv.ver << " " << bestCS->pus[i]->mean.hor << " " << bestCS->pus[i]->mean.ver << " " << bestCS->pus[i]->var.hor << " " << bestCS->pus[i]->var.ver << " " << bestCS->pus[i]->mode.hor << " " << bestCS->pus[i]->mode.ver << " "
-            << bestCS->pus[i]->best_mv.hor << " " << bestCS->pus[i]->best_mv.ver
-            << " " << bestCS->pus[i]->start_cost << " " << bestCS->pus[i]->best_cost << " " << bestCS->pus[i]->range << " "
-            << std::endl;*/
+         if(bestCS->pus[i]->replace==1)
+           outFile21 << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
+            << bestCS->pus[i]->lheight() << " " <<"replace: "<< bestCS->pus[i]->replace
+           <<"start_mv: " << bestCS->pus[i]->start_mv.hor << " " << bestCS->pus[i]->start_mv.ver << " " <<" mean: "<< bestCS->pus[i]->mean.hor << " " << bestCS->pus[i]->mean.ver << " " <<"var: "<< bestCS->pus[i]->var.hor << " " << bestCS->pus[i]->var.ver << " "<<" mode: " << bestCS->pus[i]->mode.hor << " " << bestCS->pus[i]->mode.ver << " "
+            <<" best_mv: "<< bestCS->pus[i]->best_mv.hor << " " << bestCS->pus[i]->best_mv.ver
+            << " " <<" start_cost: "<< bestCS->pus[i]->start_cost << " "<<" best_cost: " << bestCS->pus[i]->best_cost << " " <<" range: "<< bestCS->pus[i]->range << " "<< "POC: " <<bestCS->picture->poc<<"Mergeflag: "<< bestCS->pus[i]->mergeFlag<<
+           "affine: "<< bestCS->pus[i]->cu->affine
+            << std::endl;
           //std::string filename1 =
           //  "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "ctu.txt";
 
@@ -346,6 +347,25 @@ void EncCu::compressCtu( CodingStructure& cs, const UnitArea& area, const unsign
             << bestCS->pus[i]->lheight() << std::endl;*/
         }
       }
+    }
+    std::string filename22 =
+      "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "all_finish.txt";
+
+    // 打开输出文件
+    std::ofstream outFile22(filename22, std::ios::app);
+    if (!outFile22)
+    {
+      std::cerr << "无法打开输出文件: " << filename22 << std::endl;   // 错误代码
+    }
+    for (int i = 0; i < bestCS->cus.size(); i++)
+    {
+      outFile22 << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
+        << bestCS->pus[i]->lheight() << " " << "replace: " << bestCS->pus[i]->replace
+        << "start_mv: " << bestCS->pus[i]->start_mv.hor << " " << bestCS->pus[i]->start_mv.ver << " " << " mean: " << bestCS->pus[i]->mean.hor << " " << bestCS->pus[i]->mean.ver << " " << "var: " << bestCS->pus[i]->var.hor << " " << bestCS->pus[i]->var.ver << " " << " mode: " << bestCS->pus[i]->mode.hor << " " << bestCS->pus[i]->mode.ver << " "
+        << " best_mv: " << bestCS->pus[i]->best_mv.hor << " " << bestCS->pus[i]->best_mv.ver
+        << " " << " start_cost: " << bestCS->pus[i]->start_cost << " " << " best_cost: " << bestCS->pus[i]->best_cost << " " << " range: " << bestCS->pus[i]->range << " " << "POC: " << bestCS->picture->poc << "Mergeflag: " << bestCS->pus[i]->mergeFlag <<
+        "affine: " << bestCS->pus[i]->cu->affine
+        << std::endl;
     }
   }
 #endif

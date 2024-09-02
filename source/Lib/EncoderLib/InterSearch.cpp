@@ -4953,9 +4953,7 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
   }
 
   Mv cMvHalf, cMvQter;
-#if RGMV_Mean
-  pu.replace = 0;
-#endif
+
   CHECK(eRefPicList >= MAX_NUM_REF_LIST_ADAPT_SR || iRefIdxPred>=int(MAX_IDX_ADAPT_SR), "Invalid reference picture list");
   m_iSearchRange = m_aaiAdaptSR[eRefPicList][iRefIdxPred];
 
@@ -4996,6 +4994,12 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
   cStruct.useAltHpelIf = pu.cu->imv == IMV_HPEL;
   cStruct.inCtuSearch = false;
   cStruct.zeroMV = false;
+#if RGMV_Mean
+  cStruct.best_cost = 0;
+  cStruct.start_cost = 0;
+  cStruct.start_mv.hor = 0;
+  cStruct.start_mv.ver = 0;
+#endif
   {
     if (m_useCompositeRef && pu.cs->slice->getRefPic(eRefPicList, iRefIdxPred)->longTerm)
     {
@@ -5135,12 +5139,7 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
       //pu.correct_cnt = cnt_correct;
 
       pu.replace = 1;
-      pu.mean.hor = 0;
-      pu.mean.ver = 0;
-      pu.var.hor = 0;
-      pu.var.ver = 0;
-      pu.mode.hor = 0;
-      pu.mode.ver = 0;
+     
       hor_mean = calculate_mean(RGMV_hor);
       ver_mean = calculate_mean(RGMV_ver);
       hor_var = calculate_variance(RGMV_hor);
@@ -5173,11 +5172,7 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
       // start_cost = m_cDistParam.distFunc(m_cDistParam);
       // start_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
       //
-       //pu.start_cost = start_cost;
-      pu.start_mv.hor = 0;
-      pu.start_mv.ver = 0;
-      pu.best_mv.hor = 0;
-      pu.best_mv.ver = 0;
+    
       pu.start_mv = rcMv;
       cStruct.start_mv = rcMv;
       rcMv.changePrecision(MV_PRECISION_INT, MV_PRECISION_INTERNAL);
@@ -5214,21 +5209,21 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
        //  << " " << pu.start_cost << " " << pu.best_cost << " " << pu.range << " "<<pu.replace
        //  << std::endl;
 
-      std::string filename = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\"
-        + std::to_string(pu.cs->picture->poc) + "all.txt";
+      //std::string filename = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\"
+      //  + std::to_string(pu.cs->picture->poc) + "amvp.txt";
 
-      // 打开输出文件
-      std::ofstream outFile11(filename, std::ios::app);
-      if (!outFile11)
-      {
-        std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
-      }
-      outFile11<< pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " "
-         <<pu.lheight() << " "
-         << pu.start_mv.hor << " " << pu.start_mv.ver << " " << pu.mean.hor << " " << pu.mean.ver << " " << pu.var.hor << " " << pu.var.ver << " " << pu.mode.hor << " " << pu.mode.ver << " "
-         << pu.best_mv.hor << " " <<pu.best_mv.ver
-         << " " << pu.start_cost << " " << pu.best_cost << " " << pu.range << " "<<pu.replace
-         << std::endl;
+      //// 打开输出文件
+      //std::ofstream outFile11(filename, std::ios::app);
+      //if (!outFile11)
+      //{
+      //  std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
+      //}
+      //outFile11<< pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " "
+      //   <<pu.lheight() << " "
+      //   << pu.start_mv.hor << " " << pu.start_mv.ver << " " << pu.mean.hor << " " << pu.mean.ver << " " << pu.var.hor << " " << pu.var.ver << " " << pu.mode.hor << " " << pu.mode.ver << " "
+      //   << pu.best_mv.hor << " " <<pu.best_mv.ver
+      //   << " " << pu.start_cost << " " << pu.best_cost << " " << pu.range << " "<<pu.replace
+      //   << std::endl;
 #endif
     }
   }
@@ -5279,12 +5274,7 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
       //pu.correct_cnt = cnt_correct;
       
       pu.replace = 1;
-      pu.mean.hor = 0;
-      pu.mean.ver = 0;
-      pu.var.hor = 0;
-      pu.var.ver = 0;
-      pu.mode.hor = 0;
-      pu.mode.ver = 0;
+     
       hor_mean   = calculate_mean(RGMV_hor);
       ver_mean   = calculate_mean(RGMV_ver);
       hor_var    = calculate_variance(RGMV_hor);
@@ -5318,10 +5308,7 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
      // start_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
      //
       //pu.start_cost = start_cost;
-      pu.start_mv.hor = 0;
-      pu.start_mv.ver = 0;
-      pu.best_mv.hor = 0;
-      pu.best_mv.ver = 0;
+     
       pu.start_mv   = rcMv;
       cStruct.start_mv = rcMv;
       rcMv.changePrecision(MV_PRECISION_INT, MV_PRECISION_INTERNAL);
@@ -5363,19 +5350,21 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
       //  << " " << pu.start_cost << " " << pu.best_cost << " " << pu.range << " "<<pu.replace
       //  << std::endl;
      
-      std::string filename = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\"
-                             + std::to_string(pu.cs->picture->poc) + "all.txt";
+      //std::string filename = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\"
+      //                       + std::to_string(pu.cs->picture->poc) + "all.txt";
 
-      // 打开输出文件
-      std::ofstream outFile(filename, std::ios::app);
-      if (!outFile)
-      {
-        std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
-      }
-      outFile << pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " " << pu.lheight() << " " << pu.start_mv.hor << " "
-              << pu.start_mv.ver << " " << pu.start_cost << " " << pu.best_mv.hor << " " << pu.best_mv.ver << " "
-              << pu.best_cost 
-              << std::endl;
+      //// 打开输出文件
+      //std::ofstream outFile(filename, std::ios::app);
+      //if (!outFile)
+      //{
+      //  std::cerr << "无法打开输出文件: " << filename << std::endl;   // 错误代码
+      //}
+      //outFile << pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " "
+      //  << pu.lheight() << " "
+      //  << pu.start_mv.hor << " " << pu.start_mv.ver << " " << pu.mean.hor << " " << pu.mean.ver << " " << pu.var.hor << " " << pu.var.ver << " " << pu.mode.hor << " " << pu.mode.ver << " "
+      //  << pu.best_mv.hor << " " << pu.best_mv.ver
+      //  << " " << pu.start_cost << " " << pu.best_cost << " " << pu.range << " " << pu.replace
+      //  << std::endl;
       
     }
 #endif
@@ -5388,7 +5377,23 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
       m_integerMv2Nx2N[eRefPicList][iRefIdxPred] = rcMv;
     }
   }
+#if RGMV_Mean
+  std::string filename23 = "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\"
+    + std::to_string(pu.cs->picture->poc) + "amvp.txt";
 
+  // 打开输出文件
+  std::ofstream outFile23(filename23, std::ios::app);
+  if (!outFile23)
+  {
+    std::cerr << "无法打开输出文件: " << filename23 << std::endl;   // 错误代码
+  }
+  outFile23 << pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " "
+    << pu.lheight() << " " << pu.replace
+    << pu.start_mv.hor << " " << pu.start_mv.ver << " " << pu.mean.hor << " " << pu.mean.ver << " " << pu.var.hor << " " << pu.var.ver << " " << pu.mode.hor << " " << pu.mode.ver << " "
+    << pu.best_mv.hor << " " << pu.best_mv.ver
+    << " " << pu.start_cost << " " << pu.best_cost << " " << pu.range << " " 
+    << std::endl;
+#endif
   DTRACE( g_trace_ctx, D_ME, "%d %d %d :MECostFPel<L%d,%d>: %d,%d,%dx%d, %d", DTRACE_GET_COUNTER( g_trace_ctx, D_ME ), pu.cu->slice->getPOC(), 0, ( int ) eRefPicList, ( int ) bBi, pu.Y().x, pu.Y().y, pu.Y().width, pu.Y().height, ruiCost );
   // sub-pel refinement for sub-pel resolution
   if ( pu.cu->imv == 0 || pu.cu->imv == IMV_HPEL )
