@@ -303,72 +303,72 @@ void EncCu::compressCtu( CodingStructure& cs, const UnitArea& area, const unsign
   tempCS->prevQP[CH_L] = bestCS->prevQP[CH_L] = prevQP[CH_L];
 
   xCompressCU(tempCS, bestCS, partitioner);
-#if RGMV_Mean
-
-  if (bestCS->picture->poc > 0)
-  {
-    std::string filename21 =
-      "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "choose.txt";
-
-    // 打开输出文件
-    std::ofstream outFile21(filename21, std::ios::app);
-    if (!outFile21)
-    {
-      std::cerr << "无法打开输出文件: " << filename21 << std::endl;   // 错误代码
-    }
-    for (int i = 0; i < bestCS->cus.size(); i++)
-    {
-      if (bestCS->cus[i]->predMode == 0)
-      {
-        if ((bestCS->pus[i]->mergeFlag == 0) && (bestCS->pus[i]->cu->affine == 0))
-        {
-         if(bestCS->pus[i]->replace==1)
-           outFile21 << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
-            << bestCS->pus[i]->lheight() << " " <<"replace: "<< bestCS->pus[i]->replace
-           <<"start_mv: " << bestCS->pus[i]->start_mv.hor << " " << bestCS->pus[i]->start_mv.ver << " " <<" mean: "<< bestCS->pus[i]->mean.hor << " " << bestCS->pus[i]->mean.ver << " " <<"var: "<< bestCS->pus[i]->var.hor << " " << bestCS->pus[i]->var.ver << " "<<" mode: " << bestCS->pus[i]->mode.hor << " " << bestCS->pus[i]->mode.ver << " "
-            <<" best_mv: "<< bestCS->pus[i]->best_mv.hor << " " << bestCS->pus[i]->best_mv.ver
-            << " " <<" start_cost: "<< bestCS->pus[i]->start_cost << " "<<" best_cost: " << bestCS->pus[i]->best_cost << " " <<" range: "<< bestCS->pus[i]->range << " "<< "POC: " <<bestCS->picture->poc<<"Mergeflag: "<< bestCS->pus[i]->mergeFlag<<
-           "affine: "<< bestCS->pus[i]->cu->affine
-            << std::endl;
-          //std::string filename1 =
-          //  "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "ctu.txt";
-
-          //// 打开输出文件
-          //std::ofstream outFile1(filename1, std::ios::app);
-          //if ((bestCS->pus[i]->lx() == 80 && bestCS->pus[i]->ly() == 372 && bestCS->pus[i]->lwidth() == 16 && bestCS->pus[i]->lheight() == 4 && bestCS->slice->getPOC() == 2) || (bestCS->pus[i]->lx() == 336 && bestCS->pus[i]->ly() == 276 && bestCS->pus[i]->lwidth() == 16 && bestCS->pus[i]->lheight() == 4 && bestCS->slice->getPOC() == 2) || (bestCS->pus[i]->lx() == 512 && bestCS->pus[i]->ly() == 588 && bestCS->pus[i]->lwidth() == 32 && bestCS->pus[i]->lheight() == 4 && bestCS->slice->getPOC() == 2))
-
-          //  outFile1 << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
-          //  << bestCS->pus[i]->lheight() << " "
-          //  << bestCS->pus[i]->start_mv.hor << " " << bestCS->pus[i]->start_mv.ver << " " << bestCS->pus[i]->mean.hor << " " << bestCS->pus[i]->mean.ver << " " << bestCS->pus[i]->var.hor << " " << bestCS->pus[i]->var.ver << " " << bestCS->pus[i]->mode.hor << " " << bestCS->pus[i]->mode.ver << " "
-          //  << bestCS->pus[i]->best_mv.hor << " " << bestCS->pus[i]->best_mv.ver
-          //  << " " << bestCS->pus[i]->start_cost << " " << bestCS->pus[i]->best_cost << " " << bestCS->pus[i]->range << " " << bestCS->pus[i]->replace
-          //  << std::endl;
-         /* outFile << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
-            << bestCS->pus[i]->lheight() << std::endl;*/
-        }
-      }
-    }
-    std::string filename22 =
-      "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "all_finish.txt";
-
-    // 打开输出文件
-    std::ofstream outFile22(filename22, std::ios::app);
-    if (!outFile22)
-    {
-      std::cerr << "无法打开输出文件: " << filename22 << std::endl;   // 错误代码
-    }
-    for (int i = 0; i < bestCS->cus.size(); i++)
-    {
-      outFile22 << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
-        << bestCS->pus[i]->lheight() << " " << "replace: " << bestCS->pus[i]->replace
-        << "start_mv: " << bestCS->pus[i]->start_mv.hor << " " << bestCS->pus[i]->start_mv.ver << " " << " mean: " << bestCS->pus[i]->mean.hor << " " << bestCS->pus[i]->mean.ver << " " << "var: " << bestCS->pus[i]->var.hor << " " << bestCS->pus[i]->var.ver << " " << " mode: " << bestCS->pus[i]->mode.hor << " " << bestCS->pus[i]->mode.ver << " "
-        << " best_mv: " << bestCS->pus[i]->best_mv.hor << " " << bestCS->pus[i]->best_mv.ver
-        << " " << " start_cost: " << bestCS->pus[i]->start_cost << " " << " best_cost: " << bestCS->pus[i]->best_cost << " " << " range: " << bestCS->pus[i]->range << " " << "POC: " << bestCS->picture->poc << "Mergeflag: " << bestCS->pus[i]->mergeFlag <<
-        "affine: " << bestCS->pus[i]->cu->affine
-        << std::endl;
-    }
-  }
-#endif
+//#if RGMV_Mean
+//
+//  if (bestCS->picture->poc > 0)
+//  {
+//    std::string filename21 =
+//      "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "choose.txt";
+//
+//    // 打开输出文件
+//    std::ofstream outFile21(filename21, std::ios::app);
+//    if (!outFile21)
+//    {
+//      std::cerr << "无法打开输出文件: " << filename21 << std::endl;   // 错误代码
+//    }
+//    for (int i = 0; i < bestCS->cus.size(); i++)
+//    {
+//      if (bestCS->cus[i]->predMode == 0)
+//      {
+//        if ((bestCS->pus[i]->mergeFlag == 0) && (bestCS->pus[i]->cu->affine == 0))
+//        {
+//         if(bestCS->pus[i]->replace)
+//           outFile21 << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
+//            << bestCS->pus[i]->lheight() << " " <<"replace: "<<" "<< bestCS->pus[i]->replace<<" "
+//           <<"start_mv: " <<" "<< bestCS->pus[i]->start_mv.hor << " " << bestCS->pus[i]->start_mv.ver << " " <<" mean: "<<" "<< bestCS->pus[i]->mean.hor << " " << bestCS->pus[i]->mean.ver << " " <<"var: "<<" "<< bestCS->pus[i]->var.hor << " " << bestCS->pus[i]->var.ver << " "<<" mode: " <<" "<< bestCS->pus[i]->mode.hor << " " << bestCS->pus[i]->mode.ver << " "
+//            <<" best_mv: "<<" "<< bestCS->pus[i]->best_mv.hor << " " << bestCS->pus[i]->best_mv.ver
+//            << " " <<" start_cost: "<<" "<< bestCS->pus[i]->start_cost << " "<<" best_cost: " <<" "<< bestCS->pus[i]->best_cost << " " <<" range: "<<" "<< bestCS->pus[i]->range << " "<< "POC: " <<" "<<bestCS->picture->poc<<" "<<"Mergeflag: "<<" "<< bestCS->pus[i]->mergeFlag<<
+//           " "<<"affine: "<<" "<< bestCS->pus[i]->cu->affine
+//            << std::endl;
+//          //std::string filename1 =
+//          //  "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "ctu.txt";
+//
+//          //// 打开输出文件
+//          //std::ofstream outFile1(filename1, std::ios::app);
+//          //if ((bestCS->pus[i]->lx() == 80 && bestCS->pus[i]->ly() == 372 && bestCS->pus[i]->lwidth() == 16 && bestCS->pus[i]->lheight() == 4 && bestCS->slice->getPOC() == 2) || (bestCS->pus[i]->lx() == 336 && bestCS->pus[i]->ly() == 276 && bestCS->pus[i]->lwidth() == 16 && bestCS->pus[i]->lheight() == 4 && bestCS->slice->getPOC() == 2) || (bestCS->pus[i]->lx() == 512 && bestCS->pus[i]->ly() == 588 && bestCS->pus[i]->lwidth() == 32 && bestCS->pus[i]->lheight() == 4 && bestCS->slice->getPOC() == 2))
+//
+//          //  outFile1 << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
+//          //  << bestCS->pus[i]->lheight() << " "
+//          //  << bestCS->pus[i]->start_mv.hor << " " << bestCS->pus[i]->start_mv.ver << " " << bestCS->pus[i]->mean.hor << " " << bestCS->pus[i]->mean.ver << " " << bestCS->pus[i]->var.hor << " " << bestCS->pus[i]->var.ver << " " << bestCS->pus[i]->mode.hor << " " << bestCS->pus[i]->mode.ver << " "
+//          //  << bestCS->pus[i]->best_mv.hor << " " << bestCS->pus[i]->best_mv.ver
+//          //  << " " << bestCS->pus[i]->start_cost << " " << bestCS->pus[i]->best_cost << " " << bestCS->pus[i]->range << " " << bestCS->pus[i]->replace
+//          //  << std::endl;
+//         /* outFile << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
+//            << bestCS->pus[i]->lheight() << std::endl;*/
+//        }
+//      }
+//    }
+//    //std::string filename22 =
+//    //  "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "all_finish.txt";
+//
+//    //// 打开输出文件
+//    //std::ofstream outFile22(filename22, std::ios::app);
+//    //if (!outFile22)
+//    //{
+//    //  std::cerr << "无法打开输出文件: " << filename22 << std::endl;   // 错误代码
+//    //}
+//    //for (int i = 0; i < bestCS->cus.size(); i++)
+//    //{
+//    //  outFile22 << bestCS->pus[i]->lx() << " " << bestCS->pus[i]->ly() << " " << bestCS->pus[i]->lwidth() << " "
+//    //    << bestCS->pus[i]->lheight() << " " << "replace: " << " " << bestCS->pus[i]->replace << " "
+//    //    << "start_mv: " << " " << bestCS->pus[i]->start_mv.hor << " " << bestCS->pus[i]->start_mv.ver << " " << " mean: " << " " << bestCS->pus[i]->mean.hor << " " << bestCS->pus[i]->mean.ver << " " << "var: " << " " << bestCS->pus[i]->var.hor << " " << bestCS->pus[i]->var.ver << " " << " mode: " << " " << bestCS->pus[i]->mode.hor << " " << bestCS->pus[i]->mode.ver << " "
+//    //    << " best_mv: " << " " << bestCS->pus[i]->best_mv.hor << " " << bestCS->pus[i]->best_mv.ver
+//    //    << " " << " start_cost: " << " " << bestCS->pus[i]->start_cost << " " << " best_cost: " << " " << bestCS->pus[i]->best_cost << " " << " range: " << " " << bestCS->pus[i]->range << " " << "POC: " << " " << bestCS->picture->poc << " " << "Mergeflag: " << " " << bestCS->pus[i]->mergeFlag <<
+//    //    " " << "affine: " << " " << bestCS->pus[i]->cu->affine
+//    //    << std::endl;
+//    //}
+//  }
+//#endif
   cs.slice->m_mapPltCost[0].clear();
   cs.slice->m_mapPltCost[1].clear();
   // all signals were already copied during compression if the CTU was split - at this point only the structures are copied to the top level CS
@@ -1031,9 +1031,47 @@ void EncCu::xCompressCU( CodingStructure*& tempCS, CodingStructure*& bestCS, Par
     }
   } while( m_modeCtrl->nextMode( *tempCS, partitioner ) );
 
+#if RGMV_Mean
+  if (tempCS->slice->getSliceType() != I_SLICE)
+  {
+    bool isSplit = false;
+    if (bestCS->cus.size() > 1)
+    {
+      isSplit = true;
+    }
+    if (!isSplit)
+    {
+      std::string filename21 =
+        "D:\\yyx\\RGMV\\03RG_MV-Accelerate-VTM-14.0\\result\\fast\\no_skip\\" + std::to_string(bestCS->picture->poc) + "compresscu.txt";
 
+      // 打开输出文件
+      std::ofstream outFile21(filename21, std::ios::app);
+      if (!outFile21)
+      {
+        std::cerr << "无法打开输出文件: " << filename21 << std::endl;   // 错误代码
+      }
+  
+        if ((bestCS->cus[0]->predMode == 0)&&(partitioner.chType == CHANNEL_TYPE_LUMA)&&(bestCS->pus[0]->lwidth()==32)&&( bestCS->pus[0]->lheight()==32))
+        {
+          if ((bestCS->pus[0]->mergeFlag == 0) && (bestCS->pus[0]->cu->affine == 0))
+          {
+            if (bestCS->pus[0]->replace==1)
+              outFile21 << bestCS->pus[0]->lx() << " " << bestCS->pus[0]->ly() << " " << bestCS->pus[0]->lwidth() << " "
+              << bestCS->pus[0]->lheight() << " " << "replace: " << " " << bestCS->pus[0]->replace << " "
+              << "start_mv: " << " " << bestCS->pus[0]->start_mv.hor << " " << bestCS->pus[0]->start_mv.ver << " " << " mean: " << " " << bestCS->pus[0]->mean.hor << " " << bestCS->pus[0]->mean.ver << " " << "var: " << " " << bestCS->pus[0]->var.hor << " " << bestCS->pus[0]->var.ver << " " << " mode: " << " " << bestCS->pus[0]->mode.hor << " " << bestCS->pus[0]->mode.ver << " "
+              << " best_mv: " << " " << bestCS->pus[0]->best_mv.hor << " " << bestCS->pus[0]->best_mv.ver
+              << " " << " start_cost: " << " " << bestCS->pus[0]->start_cost << " " << " best_cost: " << " " << bestCS->pus[0]->best_cost << " " << " range: " << " " << bestCS->pus[0]->range << " " << "POC: " << " " << bestCS->picture->poc << " " << "Mergeflag: " << " " << bestCS->pus[0]->mergeFlag <<
+              " " << "affine: " << " " << bestCS->pus[0]->cu->affine
+              << std::endl;
+          }
+        }
+      
+    }
+  }
+#endif
   //////////////////////////////////////////////////////////////////////////
   // Finishing CU
+
   if( tempCS->cost == MAX_DOUBLE && bestCS->cost == MAX_DOUBLE )
   {
     //although some coding modes were planned to be tried in RDO, no coding mode actually finished encoding due to early termination

@@ -5224,99 +5224,97 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
       //   << pu.best_mv.hor << " " <<pu.best_mv.ver
       //   << " " << pu.start_cost << " " << pu.best_cost << " " << pu.range << " "<<pu.replace
       //   << std::endl;
+    }
 #endif
     }
-  }
-  else
-  {
-    cStruct.subShiftMode = ( !m_pcEncCfg->getRestrictMESampling() && m_pcEncCfg->getMotionEstimationSearchMethod() == MESEARCH_SELECTIVE ) ? 1 :
-                            ( m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE1 || m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE3 ) ? 2 : 0;
-    rcMv = rcMvPred;
+    else
+    {
+      cStruct.subShiftMode = (!m_pcEncCfg->getRestrictMESampling() && m_pcEncCfg->getMotionEstimationSearchMethod() == MESEARCH_SELECTIVE) ? 1 :
+        (m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE1 || m_pcEncCfg->getFastInterSearchMode() == FASTINTERSEARCH_MODE3) ? 2 : 0;
+      rcMv = rcMvPred;
 
 #if RGMV_Mean
-    m_pcRdCost->setDistParam(m_cDistParam, *cStruct.pcPatternKey, cStruct.piRefY, cStruct.iRefStride, m_lumaClpRng.bd,
-                             COMPONENT_Y, cStruct.subShiftMode);
-    int                  width  = 1024;   // 图像宽度
-    int                  height = 1024;   // 图像高度
-    std::vector<int16_t> RGMV_hor;
-    std::vector<int16_t> RGMV_ver;
-    int                  cnt_correct = 0;
-    for (int y = pu.ly(); y < pu.ly() + pu.lheight(); y++)
-    {
-      for (int x = pu.lx(); x < pu.lx() + pu.lwidth(); x++)
+      m_pcRdCost->setDistParam(m_cDistParam, *cStruct.pcPatternKey, cStruct.piRefY, cStruct.iRefStride, m_lumaClpRng.bd,
+        COMPONENT_Y, cStruct.subShiftMode);
+      int                  width = 1024;   // 图像宽度
+      int                  height = 1024;   // 图像高度
+      std::vector<int16_t> RGMV_hor;
+      std::vector<int16_t> RGMV_ver;
+      int                  cnt_correct = 0;
+      for (int y = pu.ly(); y < pu.ly() + pu.lheight(); y++)
       {
-        uint8_t RGMV_Pixel_Error = get_pixel_Y(pu.cs->picture->RGMVConfidenceBuffer, x, y, width, height);
-        float   RGMVConfidence   = RGMV_Pixel_Error > 39 ? 0.0f : PixelRGMVPossConfidence[int(RGMV_Pixel_Error)];
-        if (RGMVConfidence >= 0.8)
-          cnt_correct++;
-          
-        std::array<float, 2> RGMV = get_piexl_RGMV(pu.cs->picture->MVbuffer, x, y, width, height);
-      
+        for (int x = pu.lx(); x < pu.lx() + pu.lwidth(); x++)
+        {
+          uint8_t RGMV_Pixel_Error = get_pixel_Y(pu.cs->picture->RGMVConfidenceBuffer, x, y, width, height);
+          float   RGMVConfidence = RGMV_Pixel_Error > 39 ? 0.0f : PixelRGMVPossConfidence[int(RGMV_Pixel_Error)];
+          if (RGMVConfidence >= 0.8)
+            cnt_correct++;
 
-        int32_t RGMV0 = static_cast<int32_t>(std::round(RGMV[0]));
-        int32_t RGMV1 = static_cast<int32_t>(std::round(RGMV[1]));
-       
-        
-        RGMV_hor.push_back(RGMV0);
-        RGMV_ver.push_back(RGMV1);
-      }
-    }
-    int hor_mean   = 0;
-    int ver_mean   = 0;
-    int hor_var    = 0;
-    int ver_var    = 0;
-    int hor_mode    =0;
-    int ver_mode   = 0;
-    int MV_squ_sum = 0;
-    int RGMV_var   = 0;
-    if ((float)(cnt_correct) / (pu.lwidth() * pu.lheight()) >= 0.9)
-    {
-      //pu.correct_cnt = cnt_correct;
-      
-      pu.replace = 1;
-     
-      hor_mean   = calculate_mean(RGMV_hor);
-      ver_mean   = calculate_mean(RGMV_ver);
-      hor_var    = calculate_variance(RGMV_hor);
-      ver_var   = calculate_variance(RGMV_ver);
-      hor_mode    = calculate_mode(RGMV_hor);
-      ver_mode     = calculate_mode(RGMV_ver);
-      pu.mean.hor = hor_mean;
-      pu.mean.ver = ver_mean;
-      pu.var.hor = hor_var;
-      pu.var.ver = ver_var;
-      pu.mode.hor = hor_mode;
-      pu.mode.ver = ver_mode;
-      if ((hor_var < 100) && (ver_var < 100))
-      {
-        rcMv.hor = -hor_mean;
-        rcMv.ver = -ver_mean;
-      }
-      else
-      {
-        rcMv.hor = -hor_mode;
-        rcMv.ver = -ver_mode;
-      }
-      
+          std::array<float, 2> RGMV = get_piexl_RGMV(pu.cs->picture->MVbuffer, x, y, width, height);
 
-     // m_pcRdCost->setPredictor(predQuarter);
-     // m_pcRdCost->setCostScale(2);
-     //// rcMv.changePrecision(MV_PRECISION_INTERNAL, MV_PRECISION_INT);
-     // m_cDistParam.cur.buf = cStruct.piRefY + (rcMv.ver * cStruct.iRefStride) + rcMv.hor;
-     // Distortion start_cost = 0;
-     // start_cost = m_cDistParam.distFunc(m_cDistParam);
-     // start_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
-     //
-      //pu.start_cost = start_cost;
-     
-      pu.start_mv   = rcMv;
-      cStruct.start_mv = rcMv;
-      rcMv.changePrecision(MV_PRECISION_INT, MV_PRECISION_INTERNAL);
-      
-    }
-     
-      
-  
+
+          int32_t RGMV0 = static_cast<int32_t>(std::round(RGMV[0]));
+          int32_t RGMV1 = static_cast<int32_t>(std::round(RGMV[1]));
+
+
+          RGMV_hor.push_back(RGMV0);
+          RGMV_ver.push_back(RGMV1);
+        }
+      }
+      int hor_mean = 0;
+      int ver_mean = 0;
+      int hor_var = 0;
+      int ver_var = 0;
+      int hor_mode = 0;
+      int ver_mode = 0;
+      int MV_squ_sum = 0;
+      int RGMV_var = 0;
+      if ((float)(cnt_correct) / (pu.lwidth() * pu.lheight()) >= 0.9)
+      {
+        //pu.correct_cnt = cnt_correct;
+
+        pu.replace = 1;
+
+        hor_mean = calculate_mean(RGMV_hor);
+        ver_mean = calculate_mean(RGMV_ver);
+        hor_var = calculate_variance(RGMV_hor);
+        ver_var = calculate_variance(RGMV_ver);
+        hor_mode = calculate_mode(RGMV_hor);
+        ver_mode = calculate_mode(RGMV_ver);
+        pu.mean.hor = hor_mean;
+        pu.mean.ver = ver_mean;
+        pu.var.hor = hor_var;
+        pu.var.ver = ver_var;
+        pu.mode.hor = hor_mode;
+        pu.mode.ver = ver_mode;
+        if ((hor_var < 100) && (ver_var < 100))
+        {
+          rcMv.hor = -hor_mean;
+          rcMv.ver = -ver_mean;
+        }
+        else
+        {
+          rcMv.hor = -hor_mode;
+          rcMv.ver = -ver_mode;
+        }
+
+
+        // m_pcRdCost->setPredictor(predQuarter);
+        // m_pcRdCost->setCostScale(2);
+        //// rcMv.changePrecision(MV_PRECISION_INTERNAL, MV_PRECISION_INT);
+        // m_cDistParam.cur.buf = cStruct.piRefY + (rcMv.ver * cStruct.iRefStride) + rcMv.hor;
+        // Distortion start_cost = 0;
+        // start_cost = m_cDistParam.distFunc(m_cDistParam);
+        // start_cost += m_pcRdCost->getCostOfVectorWithPredictor(rcMv.hor, rcMv.ver, cStruct.imvShift);
+        //
+         //pu.start_cost = start_cost;
+
+        pu.start_mv = rcMv;
+        cStruct.start_mv = rcMv;
+        rcMv.changePrecision(MV_PRECISION_INT, MV_PRECISION_INTERNAL);
+
+      }
+    
 #endif
     const Mv *pIntegerMv2Nx2NPred = 0;
    
@@ -5388,7 +5386,7 @@ void InterSearch::xMotionEstimation(PredictionUnit& pu, PelUnitBuf& origBuf, Ref
     std::cerr << "无法打开输出文件: " << filename23 << std::endl;   // 错误代码
   }
   outFile23 << pu.lx() << " " << pu.ly() << " " << pu.lwidth() << " "
-    << pu.lheight() << " " << pu.replace
+    << pu.lheight() << " " << pu.replace<<" "
     << pu.start_mv.hor << " " << pu.start_mv.ver << " " << pu.mean.hor << " " << pu.mean.ver << " " << pu.var.hor << " " << pu.var.ver << " " << pu.mode.hor << " " << pu.mode.ver << " "
     << pu.best_mv.hor << " " << pu.best_mv.ver
     << " " << pu.start_cost << " " << pu.best_cost << " " << pu.range << " " 
@@ -10851,9 +10849,9 @@ void InterSearch::encodeResAndCalcRdInterCU(CodingStructure &cs, Partitioner &pa
 
     cs.dist     = distortion;
     cs.fracBits = m_CABACEstimator->getEstFracBits();
-#if RGMV_Mean
-    cs.fracBits = MAX_DOUBLE;
-#endif
+//#if RGMV_Mean
+//    cs.fracBits = MAX_DOUBLE;
+//#endif
     cs.cost     = m_pcRdCost->calcRdCost(cs.fracBits, cs.dist);
 
 

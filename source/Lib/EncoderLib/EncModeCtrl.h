@@ -122,7 +122,9 @@ inline bool isModeSplit( const EncTestMode& encTestmode )
   case ETM_SPLIT_BT_V   :
   case ETM_SPLIT_TT_H   :
   case ETM_SPLIT_TT_V   :
+
     return true;
+
   default:
     return false;
   }
